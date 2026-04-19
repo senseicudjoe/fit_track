@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "855893854597",
+    "project_id": "fit-track-887cc",
+    "storage_bucket": "fit-track-887cc.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:855893854597:android:3967d59d29c5bdf69f5cec",
+        "android_client_info": {
+          "package_name": "com.example.fit_track"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "855893854597-28tcb24bftcni9d9d6ujqql1q7u8b6ci.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.fit_track",
+            "certificate_hash": "e0dab6ee6a66767ca83793c0b21e7ffaeb095b68"
+          }
+        },
+        {
+          "client_id": "855893854597-mpa1joscchjik6ur4c7kip7oor3fdki9.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDNWeqqld1SlOyvWyWFlchyftmvSay7Si4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "855893854597-mpa1joscchjik6ur4c7kip7oor3fdki9.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

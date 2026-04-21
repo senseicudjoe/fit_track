@@ -103,6 +103,36 @@ class GoalProvider extends ChangeNotifier {
 
   // ── Initialize Default Goals ─────────────────────────────────────────────────
   Future<void> createDefaultGoals(String uid, String activityLevel) async {
+    final targets = _calculateDefaultTargets(activityLevel);
+
+    await addGoal(uid: uid, type: GoalType.steps, targetValue: targets[GoalType.steps]!, period: 'daily');
+    await addGoal(uid: uid, type: GoalType.calories, targetValue: targets[GoalType.calories]!, period: 'daily');
+    await addGoal(uid: uid, type: GoalType.activeMinutes, targetValue: 30.0, period: 'daily');
+  }
+
+  // ── Update Default Goals Based on Activity Level ─────────────────────────────
+  Future<void> updateGoalsForActivityLevel(String uid, String activityLevel) async {
+    final targets = _calculateDefaultTargets(activityLevel);
+    
+    for (final type in [GoalType.steps, GoalType.calories]) {
+      final existingGoal = _goals.cast<GoalModel?>().firstWhere(
+        (g) => g?.type == type && g?.period == 'daily',
+        orElse: () => null,
+      );
+
+      if (existingGoal != null) {
+        // Update existing goal target
+        await _firestore.saveGoal(existingGoal.copyWith(
+          targetValue: targets[type]!,
+        ));
+      } else {
+        // Create it if it somehow doesn't exist
+        await addGoal(uid: uid, type: type, targetValue: targets[type]!, period: 'daily');
+      }
+    }
+  }
+
+  Map<String, double> _calculateDefaultTargets(String activityLevel) {
     final stepTarget = switch (activityLevel) {
       'Sedentary'         => 5000.0,
       'Lightly active'    => 7500.0,
@@ -121,9 +151,10 @@ class GoalProvider extends ChangeNotifier {
       _                   => 600.0,
     };
 
-    await addGoal(uid: uid, type: GoalType.steps, targetValue: stepTarget, period: 'daily');
-    await addGoal(uid: uid, type: GoalType.calories, targetValue: calorieTarget, period: 'daily');
-    await addGoal(uid: uid, type: GoalType.activeMinutes, targetValue: 30.0, period: 'daily');
+    return {
+      GoalType.steps: stepTarget,
+      GoalType.calories: calorieTarget,
+    };
   }
 
   // ── Update goal progress ──────────────────────────────────────────────────────

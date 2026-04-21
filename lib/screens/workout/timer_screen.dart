@@ -135,13 +135,6 @@ class _TimerScreenState extends State<TimerScreen> {
             context.go('/dashboard');
           },
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.music_note_outlined,
-                color: AppColors.textSecondary),
-            onPressed: () => context.go('/player'),
-          ),
-        ],
       ),
       body: _configured
           ? _ActiveTimer(timer: timer)

@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
+import '../screens/additions/splash_screen.dart';
+import '../screens/additions/intro_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
 import '../screens/onboarding/onboarding_screen.dart';
@@ -13,6 +15,7 @@ import '../screens/main/goals_screen.dart';
 import '../screens/main/progress_screen.dart';
 import '../screens/main/insights_screen.dart';
 import '../screens/main/settings_screen.dart';
+import '../screens/main/edit_profile_screen.dart';
 import '../screens/workout/timer_screen.dart';
 import '../screens/workout/workout_detail_screen.dart';
 import '../screens/reminders/reminders_screen.dart';
@@ -24,7 +27,7 @@ class AppRouter {
 
   static final router = GoRouter(
     navigatorKey: _rootNavigatorKey,
-    initialLocation: '/dashboard',
+    initialLocation: '/',
     refreshListenable: AuthProvider.instance, // Watch for auth changes
     redirect: (context, state) {
       final auth = AuthProvider.instance;
@@ -37,16 +40,17 @@ class AppRouter {
       final isLoggedIn = auth.isLoggedIn;
       final isOnboarded = auth.isOnboarded;
       
+      final isSplash = state.matchedLocation == '/';
+      final isIntro = state.matchedLocation == '/intro';
       final isLoggingIn = state.matchedLocation == '/login';
       final isRegistering = state.matchedLocation == '/register';
-      final isAuthRoute = isLoggingIn || isRegistering;
+      final isAuthRoute = isLoggingIn || isRegistering || isSplash || isIntro;
 
       final isOnboarding = state.matchedLocation == '/onboarding';
-      final isPermissions = state.matchedLocation == '/permissions';
 
-      // 1. If not logged in and not on an auth route, go to login
+      // 1. If not logged in and not on an auth route, go to splash
       if (!isLoggedIn) {
-        return isAuthRoute ? null : '/login';
+        return isAuthRoute ? null : '/';
       }
 
       // 2. If logged in but not onboarded, keep user inside onboarding flow.
@@ -54,7 +58,7 @@ class AppRouter {
         return isOnboarding ? null : '/onboarding';
       }
 
-      // 3. After login, send onboarded users to permissions prompt first.
+      // 3. After login, send onboarded users to permissions prompt first (if they aren't already in the app)
       if (isLoggedIn && isOnboarded && isAuthRoute) {
         return '/permissions';
       }
@@ -68,6 +72,10 @@ class AppRouter {
       return null;
     },
     routes: [
+      // Splash and Intro
+      GoRoute(path: '/',      builder: (_, __) => const SplashScreen()),
+      GoRoute(path: '/intro',  builder: (_, __) => const IntroScreen()),
+
       // Auth routes
       GoRoute(path: '/login',    builder: (_, __) => const LoginScreen()),
       GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
@@ -89,6 +97,13 @@ class AppRouter {
           GoRoute(path: '/settings',  builder: (_, __) => const SettingsScreen()),
           GoRoute(path: '/reminders', builder: (_, __) => const RemindersScreen()),
         ],
+      ),
+
+      // Profile Edit
+      GoRoute(
+        path: '/edit-profile',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, __) => const EditProfileScreen(),
       ),
 
       // Full-screen workout routes (no bottom nav)

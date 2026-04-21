@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/goal_provider.dart';
 import '../../utils/constants.dart';
 
 class EditProfileScreen extends StatefulWidget {
@@ -51,6 +52,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final auth = context.read<AuthProvider>();
+    final goalProvider = context.read<GoalProvider>();
+    
+    final oldActivity = auth.user?.activityLevel;
+
     final updated = auth.user!.copyWith(
       displayName: _nameCtrl.text.trim(),
       age: _age,
@@ -61,6 +66,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
 
     await auth.updateProfile(updated);
+    
+    // If activity level changed, update default goals too
+    if (oldActivity != _activity) {
+      await goalProvider.updateGoalsForActivityLevel(auth.user!.uid, _activity);
+    }
+
     if (mounted) {
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(

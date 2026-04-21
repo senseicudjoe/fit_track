@@ -118,8 +118,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(user?.displayName ?? '—',
-                          style: AppTextStyles.heading3),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(user?.displayName ?? '—',
+                              style: AppTextStyles.heading3),
+                          TextButton(
+                            onPressed: () => context.push('/edit-profile'),
+                            style: TextButton.styleFrom(
+                              minimumSize: Size.zero,
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: Text('Edit', style: TextStyle(color: AppColors.primary, fontSize: 12)),
+                          ),
+                        ],
+                      ),
                       Text(user?.email ?? '—', style: AppTextStyles.caption),
                       if (user != null)
                         Text(
@@ -138,14 +152,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _SectionLabel('Preferences'),
           const SizedBox(height: AppSpacing.sm),
           _SettingsCard(children: [
-            _SwitchRow(
-              label: 'Metric units (kg / km)',
-              value: _metricUnits,
-              onChanged: (v) {
-                setState(() => _metricUnits = v);
-                _setPref('metric_units', v);
-              },
-            ),
             _SwitchRow(
               label: 'Workout reminders',
               value: _remindersOn,

@@ -38,6 +38,15 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _handleGoogleSignIn() async {
+    final auth = context.read<AuthProvider>();
+    final ok = await auth.signInWithGoogle();
+    if (!mounted) return;
+    if (ok) {
+      context.go('/permissions');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
@@ -116,6 +125,24 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   )
                       : const Text('Sign in'),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+
+                OutlinedButton(
+                  onPressed: auth.loading ? null : _handleGoogleSignIn,
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 48),
+                    side: const BorderSide(color: AppColors.border),
+                    shape: const RoundedRectangleBorder(borderRadius: AppRadius.md),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.login, size: 20), // Placeholder for Google Icon
+                      const SizedBox(width: AppSpacing.sm),
+                      Text('Continue with Google', style: AppTextStyles.heading3),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.xl),
 

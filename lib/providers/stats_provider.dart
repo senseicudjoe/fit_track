@@ -73,7 +73,8 @@ class StatsProvider extends ChangeNotifier {
         _syncGoalsLocally(uid);
         notifyListeners();
       };
-      await _pedometer.start(uid);
+      // Pass the steps from Firestore as the initial baseline if the local cache is empty
+      await _pedometer.start(uid, initialSteps: _today?.steps);
 
       _syncTimer?.cancel();
       _syncTimer = Timer.periodic(

@@ -90,7 +90,10 @@ class GoalProvider extends ChangeNotifier {
         period:       period,
         createdAt:    DateTime.now(),
       );
-      await _firestore.saveGoal(goal);
+      await _firestore.saveGoal(goal).timeout(
+        const Duration(seconds: 3),
+        onTimeout: () => debugPrint('Goal save queued offline'),
+      );
       _error = null;
       return true;
     } catch (e) {
@@ -121,10 +124,13 @@ class GoalProvider extends ChangeNotifier {
       );
 
       if (existingGoal != null) {
-        // Update existing goal target
+        // Update existing goal target with timeout
         await _firestore.saveGoal(existingGoal.copyWith(
           targetValue: targets[type]!,
-        ));
+        )).timeout(
+          const Duration(seconds: 2),
+          onTimeout: () => debugPrint('Goal update queued offline'),
+        );
       } else {
         // Create it if it somehow doesn't exist
         await addGoal(uid: uid, type: type, targetValue: targets[type]!, period: 'daily');
@@ -160,7 +166,11 @@ class GoalProvider extends ChangeNotifier {
   // ── Update goal progress ──────────────────────────────────────────────────────
   Future<void> updateProgress(
       String uid, String goalId, double currentValue) async {
-    await _firestore.updateGoalProgress(uid, goalId, currentValue);
+    // Non-blocking for offline
+    await _firestore.updateGoalProgress(uid, goalId, currentValue).timeout(
+      const Duration(seconds: 2),
+      onTimeout: () => debugPrint('Progress update queued offline'),
+    );
   }
 
   // ── Sync progress from today's stats ──────────────────────────────────────────
@@ -189,7 +199,10 @@ class GoalProvider extends ChangeNotifier {
 
   // ── Delete goal ───────────────────────────────────────────────────────────────
   Future<void> deleteGoal(String uid, String goalId) async {
-    await _firestore.deleteGoal(uid, goalId);
+    await _firestore.deleteGoal(uid, goalId).timeout(
+      const Duration(seconds: 2),
+      onTimeout: () => debugPrint('Goal delete queued offline'),
+    );
   }
 
   void _setLoading(bool v) {

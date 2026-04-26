@@ -88,7 +88,12 @@ class WorkoutProvider extends ChangeNotifier {
         timerSplits:    timerSplits,
         loggedAt:       DateTime.now(),
       );
-      await _firestore.saveWorkout(workout);
+
+      await _firestore.saveWorkout(workout).timeout(
+        const Duration(seconds: 3),
+        onTimeout: () => debugPrint('Workout queued offline'),
+      );
+
       await _db.clearDraft(uid);
       _error = null;
       return true;
@@ -101,11 +106,21 @@ class WorkoutProvider extends ChangeNotifier {
   }
 
   Future<void> deleteWorkout(String uid, String workoutId) async {
-    await _firestore.deleteWorkout(uid, workoutId);
+    try {
+      await _firestore.deleteWorkout(uid, workoutId).timeout(
+        const Duration(seconds: 2),
+        onTimeout: () => debugPrint('Delete queued offline'),
+      );
+    } catch (e) {
+      debugPrint('Error deleting workout: $e');
+    }
   }
 
   Future<WorkoutModel?> fetchWorkout(String uid, String workoutId) async {
-    return _firestore.fetchWorkout(uid, workoutId);
+    return _firestore.fetchWorkout(uid, workoutId).timeout(
+      const Duration(seconds: 5),
+      onTimeout: () => null,
+    );
   }
 
   Future<void> saveDraft(String uid, Map<String, dynamic> form) async {

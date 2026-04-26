@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../providers/auth_provider.dart';
 import '../screens/additions/splash_screen.dart';
@@ -25,14 +26,21 @@ class AppRouter {
   static final _rootNavigatorKey = GlobalKey<NavigatorState>();
   static final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
+  // Cache for permissions status to use in the synchronous redirect
+  static bool _permissionsHandled = false;
+
+  static Future<void> init() async {
+    final prefs = await SharedPreferences.getInstance();
+    _permissionsHandled = prefs.getBool('permissions_handled') ?? false;
+  }
+
   static final router = GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/',
-    refreshListenable: AuthProvider.instance, // Watch for auth changes
+    refreshListenable: AuthProvider.instance,
     redirect: (context, state) {
       final auth = AuthProvider.instance;
       
-      // 0. Wait for initialization to avoid flickering
       if (!auth.isInitialized) {
         return null;
       }
@@ -47,6 +55,7 @@ class AppRouter {
       final isAuthRoute = isLoggingIn || isRegistering || isSplash || isIntro;
 
       final isOnboarding = state.matchedLocation == '/onboarding';
+      final isPermissions = state.matchedLocation == '/permissions';
 
       // 1. If not logged in and not on an auth route, go to splash
       if (!isLoggedIn) {
@@ -58,33 +67,28 @@ class AppRouter {
         return isOnboarding ? null : '/onboarding';
       }
 
-      // 3. After login, send onboarded users to permissions prompt first (if they aren't already in the app)
-      if (isLoggedIn && isOnboarded && isAuthRoute) {
-        return '/permissions';
+      // 3. Only show permissions if not yet handled
+      if (isLoggedIn && isOnboarded && !_permissionsHandled && !isPermissions) {
+         // Check again to see if it was just handled in this session
+         _checkPermissionsStatus();
+         if (!_permissionsHandled) return '/permissions';
       }
 
-      // 4. Onboarded users should never re-enter onboarding.
-      if (isLoggedIn && isOnboarded && isOnboarding) {
+      // 4. If logged in, onboarded, and permissions handled, avoid auth/onboarding screens
+      if (isLoggedIn && isOnboarded && (isAuthRoute || isOnboarding || (isPermissions && _permissionsHandled))) {
         return '/dashboard';
       }
 
-      // No redirect needed
       return null;
     },
     routes: [
-      // Splash and Intro
       GoRoute(path: '/',      builder: (_, __) => const SplashScreen()),
       GoRoute(path: '/intro',  builder: (_, __) => const IntroScreen()),
-
-      // Auth routes
       GoRoute(path: '/login',    builder: (_, __) => const LoginScreen()),
       GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
-
-      // Onboarding routes
       GoRoute(path: '/onboarding',  builder: (_, __) => const OnboardingScreen()),
       GoRoute(path: '/permissions', builder: (_, __) => const PermissionsScreen()),
 
-      // Main shell with bottom nav
       ShellRoute(
         navigatorKey: _shellNavigatorKey,
         builder: (context, state, child) => MainShell(child: child),
@@ -99,14 +103,12 @@ class AppRouter {
         ],
       ),
 
-      // Profile Edit
       GoRoute(
         path: '/edit-profile',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (_, __) => const EditProfileScreen(),
       ),
 
-      // Full-screen workout routes (no bottom nav)
       GoRoute(path: '/timer',   builder: (_, __) => const TimerScreen()),
       GoRoute(
         path: '/workout/:id',
@@ -116,4 +118,9 @@ class AppRouter {
       ),
     ],
   );
+
+  static void _checkPermissionsStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    _permissionsHandled = prefs.getBool('permissions_handled') ?? false;
+  }
 }

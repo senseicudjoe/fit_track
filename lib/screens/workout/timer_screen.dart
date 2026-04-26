@@ -39,13 +39,19 @@ class _TimerScreenState extends State<TimerScreen> {
     final uid = context.read<AuthProvider>().user?.uid;
     if (uid == null || !mounted) return;
 
-    final totalMin = (_workSec * _rounds + _cooldownSec) ~/ 60;
-    final calories = (totalMin * 7.5).roundToDouble();
+    // Calculate total seconds to avoid integer division issues
+    final totalSeconds = (_workSec * _rounds) + (_restSec * (_rounds - 1)) + _cooldownSec;
+
+    // For logging, we use minutes (rounded up to nearest 1 if > 0)
+    final durationMin = (totalSeconds / 60).ceil().clamp(1, 999);
+
+    // Calculate calories based on precise minutes (double)
+    final calories = ((totalSeconds / 60) * 7.5).roundToDouble();
 
     final ok = await context.read<WorkoutProvider>().logWorkout(
       uid:            uid,
       type:           'HIIT',
-      durationMin:    totalMin,
+      durationMin:    durationMin,
       caloriesBurned: calories,
       distanceKm:     0,
       timerSplits:    splits,
@@ -54,9 +60,9 @@ class _TimerScreenState extends State<TimerScreen> {
 
     if (ok && mounted) {
       await context.read<StatsProvider>().onWorkoutLogged(
-        uid: uid, calories: calories, durationMin: totalMin,
+        uid: uid, calories: calories, durationMin: durationMin,
       );
-      _showCompletionSheet(splits, totalMin, calories);
+      _showCompletionSheet(splits, durationMin, calories);
     }
   }
 
@@ -75,7 +81,7 @@ class _TimerScreenState extends State<TimerScreen> {
             const SizedBox(height: AppSpacing.md),
             Text('Session complete!', style: AppTextStyles.heading2),
             const SizedBox(height: AppSpacing.sm),
-            Text('$_rounds rounds · $totalMin min · ${calories.toStringAsFixed(0)} kcal',
+            Text('$_rounds rounds · $totalMin min · ${calories.toStringAsFixed(1)} kcal',
                 style: AppTextStyles.body),
             const SizedBox(height: AppSpacing.xl),
             Row(
@@ -250,14 +256,16 @@ class _ConfigView extends StatelessWidget {
 
   String _totalTime(int w, int r, int c, int rounds) {
     final total = w * rounds + r * (rounds - 1) + c;
+    if (total < 60) return '${total}s';
     final m = total ~/ 60;
     final s = total % 60;
     return s == 0 ? '${m}m' : '${m}m ${s}s';
   }
 
   String _estCalories(int w, int r, int c, int rounds) {
-    final totalMin = (w * rounds + r * (rounds - 1) + c) / 60;
-    return '${(totalMin * 7.5).toStringAsFixed(0)} kcal';
+    final totalSeconds = (w * rounds + r * (rounds - 1) + c);
+    final kcal = (totalSeconds / 60) * 7.5;
+    return '${kcal.toStringAsFixed(1)} kcal';
   }
 }
 

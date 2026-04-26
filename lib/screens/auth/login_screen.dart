@@ -32,19 +32,13 @@ class _LoginScreenState extends State<LoginScreen> {
       email: _emailCtrl.text.trim(),
       password: _passCtrl.text,
     );
-    if (!mounted) return;
-    if (ok) {
-      context.go('/permissions');
-    }
+    // Navigation is handled by AppRouter's refreshListenable
   }
 
   Future<void> _handleGoogleSignIn() async {
     final auth = context.read<AuthProvider>();
-    final ok = await auth.signInWithGoogle();
-    if (!mounted) return;
-    if (ok) {
-      context.go('/permissions');
-    }
+    await auth.signInWithGoogle();
+    // Navigation is handled by AppRouter's refreshListenable
   }
 
   @override
@@ -138,7 +132,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.login, size: 20), // Placeholder for Google Icon
+                      const Icon(Icons.login, size: 20),
                       const SizedBox(width: AppSpacing.sm),
                       Text('Continue with Google', style: AppTextStyles.heading3),
                     ],
@@ -151,8 +145,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     Text("Don't have an account? ",
                         style: AppTextStyles.caption),
-                    GestureDetector(
-                      onTap: () => context.go('/register'),
+                    TextButton(
+                      onPressed: () => context.go('/register'),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
                       child: Text(
                         'Sign up',
                         style: AppTextStyles.caption.copyWith(

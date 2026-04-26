@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/notification_service.dart';
 import '../../utils/constants.dart';
 
@@ -49,6 +50,14 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
         _motionGranted = motionStatus.isGranted;
         _loading = false;
       });
+    }
+  }
+
+  Future<void> _complete() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('permissions_handled', true);
+    if (mounted) {
+      context.go('/dashboard');
     }
   }
 
@@ -127,7 +136,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
-                              onPressed: () => context.go('/dashboard'),
+                              onPressed: _complete,
                               child: const Text('Get started'),
                             ),
                           ),
@@ -136,7 +145,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                         const SizedBox(height: AppSpacing.md),
                         Center(
                           child: TextButton(
-                            onPressed: () => context.go('/dashboard'),
+                            onPressed: _complete,
                             child: Text(
                               'Skip for now',
                               style: AppTextStyles.caption

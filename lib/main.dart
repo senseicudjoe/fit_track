@@ -22,6 +22,9 @@ void main() async {
 
   // Initialise local notifications
   await NotificationService.instance.init();
+  
+  // Initialise router to check permission status
+  await AppRouter.init();
 
   runApp(const FitTrackApp());
 }

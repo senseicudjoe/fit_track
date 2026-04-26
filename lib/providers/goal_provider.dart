@@ -90,7 +90,10 @@ class GoalProvider extends ChangeNotifier {
         period:       period,
         createdAt:    DateTime.now(),
       );
-      await _firestore.saveGoal(goal);
+      await _firestore.saveGoal(goal).timeout(
+        const Duration(seconds: 3),
+        onTimeout: () => debugPrint('Goal save queued offline'),
+      );
       _error = null;
       return true;
     } catch (e) {
@@ -103,6 +106,39 @@ class GoalProvider extends ChangeNotifier {
 
   // ── Initialize Default Goals ─────────────────────────────────────────────────
   Future<void> createDefaultGoals(String uid, String activityLevel) async {
+    final targets = _calculateDefaultTargets(activityLevel);
+
+    await addGoal(uid: uid, type: GoalType.steps, targetValue: targets[GoalType.steps]!, period: 'daily');
+    await addGoal(uid: uid, type: GoalType.calories, targetValue: targets[GoalType.calories]!, period: 'daily');
+    await addGoal(uid: uid, type: GoalType.activeMinutes, targetValue: 30.0, period: 'daily');
+  }
+
+  // ── Update Default Goals Based on Activity Level ─────────────────────────────
+  Future<void> updateGoalsForActivityLevel(String uid, String activityLevel) async {
+    final targets = _calculateDefaultTargets(activityLevel);
+    
+    for (final type in [GoalType.steps, GoalType.calories]) {
+      final existingGoal = _goals.cast<GoalModel?>().firstWhere(
+        (g) => g?.type == type && g?.period == 'daily',
+        orElse: () => null,
+      );
+
+      if (existingGoal != null) {
+        // Update existing goal target with timeout
+        await _firestore.saveGoal(existingGoal.copyWith(
+          targetValue: targets[type]!,
+        )).timeout(
+          const Duration(seconds: 2),
+          onTimeout: () => debugPrint('Goal update queued offline'),
+        );
+      } else {
+        // Create it if it somehow doesn't exist
+        await addGoal(uid: uid, type: type, targetValue: targets[type]!, period: 'daily');
+      }
+    }
+  }
+
+  Map<String, double> _calculateDefaultTargets(String activityLevel) {
     final stepTarget = switch (activityLevel) {
       'Sedentary'         => 5000.0,
       'Lightly active'    => 7500.0,
@@ -121,15 +157,20 @@ class GoalProvider extends ChangeNotifier {
       _                   => 600.0,
     };
 
-    await addGoal(uid: uid, type: GoalType.steps, targetValue: stepTarget, period: 'daily');
-    await addGoal(uid: uid, type: GoalType.calories, targetValue: calorieTarget, period: 'daily');
-    await addGoal(uid: uid, type: GoalType.activeMinutes, targetValue: 30.0, period: 'daily');
+    return {
+      GoalType.steps: stepTarget,
+      GoalType.calories: calorieTarget,
+    };
   }
 
   // ── Update goal progress ──────────────────────────────────────────────────────
   Future<void> updateProgress(
       String uid, String goalId, double currentValue) async {
-    await _firestore.updateGoalProgress(uid, goalId, currentValue);
+    // Non-blocking for offline
+    await _firestore.updateGoalProgress(uid, goalId, currentValue).timeout(
+      const Duration(seconds: 2),
+      onTimeout: () => debugPrint('Progress update queued offline'),
+    );
   }
 
   // ── Sync progress from today's stats ──────────────────────────────────────────
@@ -158,7 +199,10 @@ class GoalProvider extends ChangeNotifier {
 
   // ── Delete goal ───────────────────────────────────────────────────────────────
   Future<void> deleteGoal(String uid, String goalId) async {
-    await _firestore.deleteGoal(uid, goalId);
+    await _firestore.deleteGoal(uid, goalId).timeout(
+      const Duration(seconds: 2),
+      onTimeout: () => debugPrint('Goal delete queued offline'),
+    );
   }
 
   void _setLoading(bool v) {

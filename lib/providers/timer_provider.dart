@@ -1,8 +1,11 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+import 'package:audioplayers/audioplayers.dart';
 import '../services/timer_service.dart';
 
 class TimerProvider extends ChangeNotifier {
   final _timer = TimerService.instance;
+  final _audioPlayer = AudioPlayer();
 
   TimerPhase get phase            => _timer.phase;
   int get secondsRemaining        => _timer.secondsRemaining;
@@ -19,14 +22,25 @@ class TimerProvider extends ChangeNotifier {
     _timer.onTick = (_) => notifyListeners();
 
     _timer.onPhaseChange = (phase, round) {
-      // Audio calls removed
+      if (phase != TimerPhase.idle) {
+        HapticFeedback.vibrate();
+      }
       notifyListeners();
     };
 
     _timer.onComplete = (splits) {
-      // Audio calls removed
+      HapticFeedback.vibrate();
+      _playCompletionSound();
       notifyListeners();
     };
+  }
+
+  Future<void> _playCompletionSound() async {
+    try {
+      await _audioPlayer.play(AssetSource('audios/beep.mp3'));
+    } catch (e) {
+      debugPrint('Error playing completion sound: $e');
+    }
   }
 
   // ── Configure before starting ─────────────────────────────────────────────────
@@ -66,5 +80,11 @@ class TimerProvider extends ChangeNotifier {
   double get sessionProgress {
     if (totalRounds == 0) return 0;
     return ((currentRound - 1) / totalRounds).clamp(0.0, 1.0);
+  }
+
+  @override
+  void dispose() {
+    _audioPlayer.dispose();
+    super.dispose();
   }
 }

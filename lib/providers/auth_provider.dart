@@ -14,12 +14,12 @@ class AuthProvider extends ChangeNotifier {
 
   UserModel? _user;
   bool _loading = false;
-  bool _isInitialized = false; // New flag
+  bool _isInitialized = false; 
   String? _error;
 
   UserModel? get user         => _user;
   bool get loading            => _loading;
-  bool get isInitialized      => _isInitialized; // New getter
+  bool get isInitialized      => _isInitialized; 
   String? get error           => _error;
   bool get isLoggedIn         => _user != null;
   bool get isOnboarded        => _user?.isOnboarded ?? false;
@@ -28,19 +28,25 @@ class AuthProvider extends ChangeNotifier {
   Future<void> _onAuthStateChanged(User? firebaseUser) async {
     if (firebaseUser == null) {
       _user = null;
-      _isInitialized = true; // Auth check complete (no user)
+      _isInitialized = true;
       notifyListeners();
       return;
     }
 
     try {
+      // Background fetch of the profile
       final profile = await _service.fetchUser(firebaseUser.uid);
-      _user = profile;
+      
+      // We only update if we found a profile. If it's null, we might be in the 
+      // middle of a registration/sign-in process that will set the user manually.
+      if (profile != null) {
+        _user = profile;
+        notifyListeners();
+      }
     } catch (e) {
-      debugPrint('Error fetching user profile: $e');
-      _user = null;
+      debugPrint('Error fetching user profile in background: $e');
     } finally {
-      _isInitialized = true; // Auth check complete (found user)
+      _isInitialized = true;
       notifyListeners();
     }
   }
@@ -53,11 +59,12 @@ class AuthProvider extends ChangeNotifier {
   }) async {
     _setLoading(true);
     try {
-      _user = await _service.register(
+      // This creates the Auth user AND the Firestore doc
+      final newUser = await _service.register(
         email: email, password: password, displayName: displayName,
       );
+      _user = newUser;
       _error = null;
-      notifyListeners();
       return true;
     } on FirebaseAuthException catch (e) {
       _error = _friendlyError(e.code);
@@ -75,10 +82,39 @@ class AuthProvider extends ChangeNotifier {
     _setLoading(true);
     try {
       await _service.login(email: email, password: password);
+      final firebaseUser = _service.currentUser;
+      if (firebaseUser != null) {
+        _user = await _service.fetchUser(firebaseUser.uid);
+      }
       _error = null;
       return true;
     } on FirebaseAuthException catch (e) {
       _error = _friendlyError(e.code);
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // ── Google Sign In ──────────────────────────────────────────────────────────
+  Future<bool> signInWithGoogle() async {
+    _setLoading(true);
+    try {
+      final cred = await _service.signInWithGoogle();
+      if (cred == null) {
+        _setLoading(false);
+        return false;
+      }
+      // Immediately fetch the profile we just ensured/created in the service
+      final profile = await _service.fetchUser(cred.user!.uid);
+      _user = profile;
+      _error = null;
+      return true;
+    } on FirebaseAuthException catch (e) {
+      _error = _friendlyError(e.code);
+      return false;
+    } catch (e) {
+      _error = 'Google Sign In failed.';
       return false;
     } finally {
       _setLoading(false);
@@ -139,6 +175,7 @@ class AuthProvider extends ChangeNotifier {
     'weak-password'        => 'Password must be at least 6 characters.',
     'invalid-email'        => 'Please enter a valid email address.',
     'network-request-failed' => 'Check your internet connection.',
+    'account-exists-with-different-credential' => 'Account already exists with a different login method.',
     _                      => 'Something went wrong. Please try again.',
   };
 }

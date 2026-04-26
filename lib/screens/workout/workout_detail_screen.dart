@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/workout_provider.dart';
+import '../../providers/stats_provider.dart';
 import '../../models/workout_model.dart';
 import '../../utils/constants.dart';
 
@@ -33,12 +34,14 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
   }
 
   Future<void> _delete() async {
+    if (_workout == null) return;
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: AppColors.card,
         title: Text('Delete workout', style: AppTextStyles.heading3),
-        content: Text('This cannot be undone.', style: AppTextStyles.body),
+        content: Text('This cannot be undone. Your daily stats will be reverted.', style: AppTextStyles.body),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -52,12 +55,25 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
         ],
       ),
     );
+
     if (confirmed == true && mounted) {
       final uid = context.read<AuthProvider>().user?.uid ?? '';
+
+      // 1. Revert stats
+      await context.read<StatsProvider>().onWorkoutDeleted(
+        uid: uid,
+        calories: _workout!.caloriesBurned,
+        durationMin: _workout!.durationMin,
+        distanceKm: _workout!.distanceKm,
+        workoutDate: _workout!.loggedAt,
+      );
+
+      // 2. Delete the record
       await context.read<WorkoutProvider>()
           .deleteWorkout(uid, widget.workoutId);
-      // Return to previous screen after deletion
-      if (mounted) context.pop();
+      
+      // 3. Return to previous screen
+      if (mounted) context.go('/progress');
     }
   }
 
@@ -84,7 +100,7 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
         title: Text(w.type),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: () => context.canPop() ? context.pop() : context.go('/progress'),
         ),
         actions: [
           IconButton(

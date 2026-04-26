@@ -45,6 +45,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final bool isInitialLoading = stats.today == null || 
                                 (workouts.loading && workouts.workouts.isEmpty);
 
+    // Fetch dynamic goals from GoalProvider
+    final double stepGoal = goals.getGoalValue(GoalType.steps, fallback: 10000);
+    final double calGoal = goals.getGoalValue(GoalType.calories, fallback: 600);
+    final double activeGoal = goals.getGoalValue(GoalType.activeMinutes, fallback: 30);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: isInitialLoading 
@@ -75,8 +80,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   // ── Hero step ring card ──────────────────────────────
                   _StepRingCard(
                     steps: stats.liveSteps,
-                    goal: 10000,
-                    progress: stats.stepProgress,
+                    goal: stepGoal.toInt(),
+                    progress: (stats.liveSteps / stepGoal).clamp(0.0, 1.0),
                     calories: stats.today?.caloriesBurned ?? 0,
                     activeMin: stats.today?.activeMinutes ?? 0,
                   ),
@@ -92,7 +97,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               .toStringAsFixed(0),
                           unit: 'kcal',
                           accent: AppColors.amber,
-                          progress: ((stats.today?.caloriesBurned ?? 0) / 600)
+                          progress: ((stats.today?.caloriesBurned ?? 0) / calGoal)
                               .clamp(0.0, 1.0),
                         ),
                       ),
@@ -103,7 +108,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           value: '${stats.today?.activeMinutes ?? 0}',
                           unit: 'min',
                           accent: AppColors.primary,
-                          progress: ((stats.today?.activeMinutes ?? 0) / 50)
+                          progress: ((stats.today?.activeMinutes ?? 0) / activeGoal)
                               .clamp(0.0, 1.0),
                         ),
                       ),
@@ -198,7 +203,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
-// ── Header ────────────────────────────────────────────────────────────────────
+// ... (rest of the file remains same)
 
 class _Header extends StatelessWidget {
   final String name, greeting;
@@ -266,8 +271,6 @@ class _Header extends StatelessWidget {
     );
   }
 }
-
-// ── Hero step ring card ────────────────────────────────────────────────────────
 
 class _StepRingCard extends StatelessWidget {
   final int steps, goal;
@@ -380,8 +383,6 @@ class _MiniStatRow extends StatelessWidget {
   }
 }
 
-// ── Glow stat card ─────────────────────────────────────────────────────────────
-
 class _GlowStatCard extends StatelessWidget {
   final String label, value, unit;
   final Color accent;
@@ -436,8 +437,6 @@ class _GlowStatCard extends StatelessWidget {
     );
   }
 }
-
-// ── Quick action cards ─────────────────────────────────────────────────────────
 
 class _PrimaryAction extends StatelessWidget {
   final IconData icon;
@@ -538,8 +537,6 @@ class _SecondaryAction extends StatelessWidget {
   }
 }
 
-// ── Section header ─────────────────────────────────────────────────────────────
-
 class _SectionHeader extends StatelessWidget {
   final String title, actionLabel;
   final VoidCallback onAction;
@@ -564,8 +561,6 @@ class _SectionHeader extends StatelessWidget {
     );
   }
 }
-
-// ── Goal row ───────────────────────────────────────────────────────────────────
 
 class _GoalRow extends StatelessWidget {
   final GoalModel goal;
@@ -653,8 +648,6 @@ class _GoalRow extends StatelessWidget {
   }
 }
 
-// ── Workout row ────────────────────────────────────────────────────────────────
-
 class _WorkoutRow extends StatelessWidget {
   final WorkoutModel workout;
   const _WorkoutRow({required this.workout});
@@ -740,8 +733,6 @@ class _WorkoutRow extends StatelessWidget {
     return '${d.day}/${d.month}';
   }
 }
-
-// ── Empty state ────────────────────────────────────────────────────────────────
 
 class _EmptyState extends StatelessWidget {
   final VoidCallback onTap;

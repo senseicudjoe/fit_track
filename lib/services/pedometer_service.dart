@@ -24,7 +24,7 @@ class PedometerService {
   void Function(String status)? onStatusUpdate;
 
   // ── Start ────────────────────────────────────────────────────────────────────
-  Future<void> start(String uid) async {
+  Future<void> start(String uid, {int? initialSteps}) async {
     // Clean up any existing subscriptions
     await stop();
     
@@ -36,7 +36,16 @@ class PedometerService {
 
     // Load today's cached steps from SQLite
     final today = _todayKey();
-    _stepsToday = await DatabaseService.instance.getStepsForDate(uid, today);
+    final cachedSteps = await DatabaseService.instance.getStepsForDate(uid, today);
+    
+    if (cachedSteps == 0 && initialSteps != null && initialSteps > 0) {
+      // If no local data but we have cloud data (e.g. fresh install), seed it
+      _stepsToday = initialSteps;
+      await DatabaseService.instance.upsertSteps(uid, today, _stepsToday);
+    } else {
+      _stepsToday = cachedSteps;
+    }
+
     onStepUpdate?.call(_stepsToday);
 
     _stepSub = Pedometer.stepCountStream.listen(
